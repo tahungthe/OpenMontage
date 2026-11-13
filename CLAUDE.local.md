@@ -12,9 +12,21 @@
 ## Video lưu trên Google Drive
 - `projects/` và `output/` trong repo là **junction** (lối tắt thư mục) trỏ tới
   `<Google Drive>\My Drive\OpenMontage\projects` và `...\output`, để máy nào cũng thấy video.
-- Ở đầu phiên, nếu `projects/` hoặc `output/` không tồn tại hoặc không phải junction tới Google Drive
+- Ở đầu phiên, nếu `projects/`, `output/` hoặc `kenh/` không tồn tại hoặc không phải junction tới Google Drive
   (ví dụ trên máy mới), làm "Cài trên máy mới" bước 3 dưới đây trước khi làm video.
 - Không bao giờ xoá nội dung trong `projects/` hoặc `output/` — đó là video của người dùng trên Drive.
+
+## Tìm chủ đề video (agent `nghien-cuu-chu-de`)
+- `kenh/` là junction tới `<Google Drive>\My Drive\OpenMontage\kenh` (hồ sơ kênh, lịch sử chủ đề, báo cáo nghiên cứu).
+  Nội dung trong đó là thông tin riêng của người dùng: không đưa lên GitHub.
+- Khi người dùng muốn gợi ý/tìm chủ đề video (vd "gợi ý chủ đề", "tuần này làm video gì"):
+  1. Nếu chưa có `kenh/ho-so-kenh.md`: hỏi người dùng tối đa 5 câu ngắn, từng ít một, kèm ví dụ để họ chọn
+     (ngách; nền tảng; khán giả; mục tiêu; phong cách & giới hạn: lộ mặt hay không, ngân sách, số video/tuần, độ dài).
+     Ghi lại thành `kenh/ho-so-kenh.md`. Hồ sơ có sẵn thì không hỏi lại; người dùng muốn đổi thì sửa file.
+  2. Gọi agent `nghien-cuu-chu-de` (Agent tool), truyền yêu cầu cụ thể của người dùng. Việc này mất vài phút: báo người dùng.
+  3. Trình bày Top 3 ngắn gọn, dễ hiểu, hỏi người dùng muốn làm video nào trước.
+  4. Khi người dùng chọn: đổi trạng thái trong `kenh/lich-su-chu-de.md` thành "đã làm" (hoặc "bỏ qua" nếu họ từ chối),
+     rồi bắt đầu sản xuất theo AGENT_GUIDE.md, dùng phần Top 5 của báo cáo làm brief.
 
 ## Cài trên máy mới (khi người dùng nhờ)
 1. Clone `https://github.com/tahungthe/OpenMontage`, `git remote add upstream https://github.com/OpenMontageInc/OpenMontage.git`.
@@ -22,7 +34,8 @@
    `cd remotion-composer && npm install`; `pip install piper-tts`; `npx --yes hyperframes --version`; copy `.env.example` → `.env`;
    sau đó `git checkout -- remotion-composer/package-lock.json` nếu npm làm nó thay đổi.
 3. Tìm ổ Google Drive (vd `G:\My Drive`). Tạo `OpenMontage\projects` và `OpenMontage\output` trong đó nếu chưa có,
-   rồi `cmd /c mklink /J projects "<Drive>\My Drive\OpenMontage\projects"` (tương tự cho `output`).
+   rồi `cmd /c mklink /J projects "<Drive>\My Drive\OpenMontage\projects"` (tương tự cho `output` và `kenh`).
+   Thêm dòng `kenh/` và `kenh` vào `.git/info/exclude` để `kenh` không bị đưa lên GitHub.
    Nếu máy chưa cài Google Drive for desktop, nhờ người dùng cài và đăng nhập trước.
 4. API key (`.env`) KHÔNG có trên GitHub (fork là công khai). Nhắc người dùng chép key sang, không bao giờ commit `.env`.
 
