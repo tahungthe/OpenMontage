@@ -9,15 +9,17 @@
 - `upstream` = bản gốc của tác giả: https://github.com/OpenMontageInc/OpenMontage
 - Nhánh chính: `main`. Môi trường Python: `.venv` (Windows: `.venv/Scripts/python.exe`).
 
-## Video lưu trên Google Drive
-- `projects/` và `output/` trong repo là **junction** (lối tắt thư mục) trỏ tới
-  `<Google Drive>\My Drive\OpenMontage\projects` và `...\output`, để máy nào cũng thấy video.
-- Ở đầu phiên, nếu `projects/`, `output/` hoặc `kenh/` không tồn tại hoặc không phải junction tới Google Drive
-  (ví dụ trên máy mới), làm "Cài trên máy mới" bước 3 dưới đây trước khi làm video.
-- Không bao giờ xoá nội dung trong `projects/` hoặc `output/` — đó là video của người dùng trên Drive.
+## Video lưu ngay trên máy (KHÔNG dùng Google Drive)
+- Từ 2026-11-15: `projects/`, `output/` và `kenh/` là **thư mục thường** trong repo, lưu thẳng trên ổ máy.
+  Làm video ở máy nào thì video nằm ở máy đó; chỉ phần code đồng bộ qua GitHub. Không tạo junction tới Google Drive nữa.
+- Nếu ba thư mục này chưa có (máy mới) thì cứ tạo thư mục trống. Nếu thấy chúng vẫn là junction tới Google Drive
+  (máy chưa chuyển): xoá junction bằng `cmd /c rmdir <tên>` (chỉ xoá lối tắt, không đụng file trên Drive),
+  tạo thư mục thường, rồi `robocopy` nội dung từ Drive về. Không xoá gì trên Drive.
+- Không bao giờ xoá nội dung trong `projects/` hoặc `output/` — đó là video của người dùng.
+- Bản cũ vẫn còn trên `<Google Drive>\My Drive\OpenMontage\` làm bản lưu dự phòng.
 
 ## Tìm chủ đề video (agent `nghien-cuu-chu-de`)
-- `kenh/` là junction tới `<Google Drive>\My Drive\OpenMontage\kenh` (hồ sơ kênh, lịch sử chủ đề, báo cáo nghiên cứu).
+- `kenh/` là thư mục trên máy (hồ sơ kênh, lịch sử chủ đề, báo cáo nghiên cứu), mỗi máy một bản riêng.
   Nội dung trong đó là thông tin riêng của người dùng: không đưa lên GitHub.
 - Khi người dùng muốn gợi ý/tìm chủ đề video (vd "gợi ý chủ đề", "tuần này làm video gì"):
   1. Nếu chưa có `kenh/ho-so-kenh.md`: hỏi người dùng tối đa 5 câu ngắn, từng ít một, kèm ví dụ để họ chọn
@@ -33,10 +35,8 @@
 2. Setup (thay cho `make setup` trên Windows): `python -m venv .venv`; `.venv/Scripts/python.exe -m pip install -r requirements.txt`;
    `cd remotion-composer && npm install`; `pip install piper-tts`; `npx --yes hyperframes --version`; copy `.env.example` → `.env`;
    sau đó `git checkout -- remotion-composer/package-lock.json` nếu npm làm nó thay đổi.
-3. Tìm ổ Google Drive (vd `G:\My Drive`). Tạo `OpenMontage\projects` và `OpenMontage\output` trong đó nếu chưa có,
-   rồi `cmd /c mklink /J projects "<Drive>\My Drive\OpenMontage\projects"` (tương tự cho `output` và `kenh`).
+3. Tạo thư mục thường `projects`, `output`, `kenh` trong repo (không dùng Google Drive).
    Thêm dòng `kenh/` và `kenh` vào `.git/info/exclude` để `kenh` không bị đưa lên GitHub.
-   Nếu máy chưa cài Google Drive for desktop, nhờ người dùng cài và đăng nhập trước.
 4. API key (`.env`) KHÔNG có trên GitHub (fork là công khai). Nhắc người dùng chép key sang, không bao giờ commit `.env`.
 
 ## Nhắc cập nhật (làm ở đầu mỗi phiên)
