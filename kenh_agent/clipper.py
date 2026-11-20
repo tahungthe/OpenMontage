@@ -173,7 +173,10 @@ def split_video(src: str | Path, out_dir: str | Path, title: str, cfg: dict[str,
     for i, (s, e) in enumerate(segments, start=1):
         label = cp["phu_de_phan"].format(n=i, tong=total)
         out = out_dir / f"phan-{i:02d}.mp4"
-        render_part(src, out, s, e, wrap_title(title.split('|')[0].strip()), label, vertical=vertical)
+        # Nguồn đã là video dọc (ví dụ tập phim ngắn 9:16): giữ nguyên khung, không chèn tiêu đề/nhãn đè lên.
+        already_vertical = info.get("height", 0) > info.get("width", 0)
+        render_part(src, out, s, e, wrap_title(title.split('|')[0].strip()), label,
+                    vertical=vertical and not already_vertical)
         parts.append({"idx": i, "total": total, "path": str(out), "start_s": round(s, 2),
                       "end_s": round(e, 2), "hook": hooks[i - 1]})
     return parts

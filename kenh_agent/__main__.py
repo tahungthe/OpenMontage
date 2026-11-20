@@ -179,6 +179,13 @@ def main(argv=None) -> None:
         data["dry_run"] = a.which == "test"
         CONFIG_PATH.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False), encoding="utf-8")
         print("Chế độ:", "chạy thử" if data["dry_run"] else "THẬT — sẽ đăng lên kênh")
+        if not data["dry_run"]:
+            # bài đã quá giờ trong lúc chạy thử: xếp lại vào giờ tốt tiếp theo, không dồn đăng một lúc
+            from .memory import iso, now_vn, rows as _rows
+            cfg2 = load_config()
+            for p in _rows("SELECT id FROM posts WHERE status='scheduled' AND scheduled_at <= ? ORDER BY scheduled_at",
+                           (iso(now_vn()),)):
+                print("Xếp lại bài", p["id"], "->", ops.reschedule(p["id"], cfg2))
     elif a.cmd == "install-poster":
         cmd_install_poster()
 

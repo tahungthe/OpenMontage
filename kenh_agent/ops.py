@@ -157,10 +157,15 @@ def queue(slug: str, cfg: dict, platforms: list[str] | None = None) -> list[dict
 
 
 def publish_due(cfg: dict, limit: int = 5) -> list[dict]:
-    """Đăng các bài đã tới giờ. Chạy định kỳ (15 phút/lần) bởi Task Scheduler."""
+    """Đăng các bài đã tới giờ. Chạy định kỳ (15 phút/lần) bởi Task Scheduler.
+
+    Chế độ chạy thử: chỉ liệt kê bài sẽ đăng, KHÔNG đổi trạng thái — để khi bật chế độ thật
+    các bài vẫn còn trong hàng đợi và được đăng thật."""
     due = rows(
         "SELECT * FROM posts WHERE status IN ('scheduled','failed') AND attempts < 3 AND scheduled_at <= ? "
         "ORDER BY scheduled_at LIMIT ?", (iso(now_vn()), limit))
+    if cfg.get("dry_run"):
+        return [{"id": p["id"], "platform": p["platform"], "status": "chay-thu (chưa đăng)"} for p in due]
     results = []
     for p in due:
         plat = get_platform(p["platform"], cfg)
@@ -205,11 +210,17 @@ def reschedule(post_id: int, cfg: dict, when: str | None = None) -> str:
 
 
 # ---------------------------------------------------------------- số liệu
+def _reader(name: str, cfg: dict):
+    """Đọc số liệu/bình luận: dùng tài khoản thật nếu đã kết nối (chỉ đọc, an toàn cả khi chạy thử)."""
+    real = get_platform(name, {**cfg, "dry_run": False})
+    return real if real.is_connected() else get_platform(name, cfg)
+
+
 def pull_analytics(cfg: dict, days: int = 45) -> dict:
     since = iso(now_vn() - timedelta(days=days))
     summary: dict[str, Any] = {}
     for name in PLATFORMS:
-        plat = get_platform(name, cfg)
+        plat = _reader(name, cfg)
         if not plat.is_connected():
             summary[name] = "chưa kết nối"
             continue
@@ -250,7 +261,7 @@ def pull_analytics(cfg: dict, days: int = 45) -> dict:
 def fetch_comments(cfg: dict, days: int = 14) -> Path:
     since = iso(now_vn() - timedelta(days=days))
     for name in PLATFORMS:
-        plat = get_platform(name, cfg)
+        plat = _reader(name, cfg)
         if not plat.is_connected():
             continue
         posts = rows("SELECT id, remote_id FROM posts WHERE platform=? AND status='posted' AND posted_at>=?",
@@ -292,6 +303,10 @@ def send_replies(replies_path: str | Path, cfg: dict) -> dict:
                 c.execute("UPDATE comments SET status='skipped', replied_at=? WHERE platform=? AND remote_id=?",
                           (iso(now_vn()), *key))
             skipped += 1
+            continue
+        if cfg.get("dry_run"):
+            log_event("comments", f"[chạy thử] sẽ trả lời {key}", it["reply"])
+            done += 1
             continue
         try:
             rid = get_platform(it["platform"], cfg).reply({"remote_id": it["remote_id"]}, it["reply"].strip())
