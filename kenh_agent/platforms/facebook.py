@@ -1,25 +1,36 @@
 """Facebook Page qua Graph API.
 
-Chuẩn bị (một lần): tạo app trên developers.facebook.com, lấy Page Access Token
-dài hạn với quyền pages_manage_posts, pages_read_engagement,
-pages_manage_engagement, pages_read_user_content, read_insights; điền vào `.env`:
-    FB_PAGE_ID=...
-    FB_PAGE_TOKEN=...
+Chuẩn bị (một lần): tạo app trên developers.facebook.com (use case "Quản lý mọi thứ
+trên Trang"), điền vào `.env`:
+    FB_APP_ID=...
+    FB_APP_SECRET=...
+rồi chạy `python -m kenh_agent connect facebook`: trình duyệt mở ra, bạn đăng nhập và
+chọn Trang. Agent tự đổi sang token Trang không hết hạn và lưu ở kenh/agent/bi-mat/.
+(Vẫn hỗ trợ cách cũ: điền thẳng FB_PAGE_ID / FB_PAGE_TOKEN trong `.env`.)
 """
 
 from __future__ import annotations
 
+import http.server
+import json
 import os
+import secrets
+import threading
 import time
+import urllib.parse
+import webbrowser
 from typing import Any
 
 import requests
 
-from ..config import env
+from ..config import SECRETS_DIR, env
 from .base import Platform
 
 GRAPH = "https://graph.facebook.com/v21.0"
 GRAPH_VIDEO = "https://graph-video.facebook.com/v21.0"
+REDIRECT = "http://localhost:8766/"
+SCOPES = ("pages_show_list,pages_manage_posts,pages_read_engagement,pages_manage_engagement,"
+          "pages_read_user_content,read_insights")
 
 
 class Facebook(Platform):
@@ -27,15 +38,81 @@ class Facebook(Platform):
 
     def __init__(self, cfg: dict[str, Any]):
         super().__init__(cfg)
+        self.page_file = SECRETS_DIR / "facebook-page.json"
         self.page_id = env("FB_PAGE_ID")
         self.token = env("FB_PAGE_TOKEN")
+        if not (self.page_id and self.token) and self.page_file.exists():
+            d = json.loads(self.page_file.read_text(encoding="utf-8"))
+            self.page_id, self.token = d["page_id"], d["page_token"]
 
     def is_connected(self) -> bool:
         return bool(self.page_id and self.token)
 
-    def connect(self) -> None:
-        if not self.is_connected():
-            raise RuntimeError("Thiếu FB_PAGE_ID / FB_PAGE_TOKEN trong .env. Xem docs/kenh-agent/HUONG-DAN.md")
+    def connect(self, page_name: str | None = None) -> None:
+        app_id, app_secret = env("FB_APP_ID"), env("FB_APP_SECRET")
+        if not (app_id and app_secret):
+            raise RuntimeError("Thiếu FB_APP_ID / FB_APP_SECRET trong .env. Xem docs/kenh-agent/HUONG-DAN.md")
+        state = secrets.token_urlsafe(16)
+        url = "https://www.facebook.com/v21.0/dialog/oauth?" + urllib.parse.urlencode({
+            "client_id": app_id, "redirect_uri": REDIRECT, "state": state, "scope": SCOPES,
+            "response_type": "code"})
+        got: dict[str, str] = {}
+
+        class H(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):  # noqa: N802
+                q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+                if "code" in q or "error" in q:
+                    got.update({k: v[0] for k, v in q.items()})
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.end_headers()
+                self.wfile.write("Đã kết nối Facebook. Bạn có thể đóng tab này.".encode("utf-8"))
+
+            def log_message(self, *a):
+                pass
+
+        srv = http.server.HTTPServer(("localhost", 8766), H)
+
+        def serve():
+            deadline = time.time() + 300
+            srv.timeout = 5
+            while not got and time.time() < deadline:
+                srv.handle_request()
+
+        t = threading.Thread(target=serve, daemon=True)
+        t.start()
+        print("Mở trình duyệt để đăng nhập Facebook…")
+        print(url)
+        webbrowser.open(url)
+        t.join(timeout=310)
+        srv.server_close()
+        if got.get("state") != state or "code" not in got:
+            raise RuntimeError(f"Đăng nhập Facebook không thành công: {got}")
+
+        def call(path, **params):
+            r = requests.get(f"{GRAPH}/{path}", params=params, timeout=60)
+            if not r.ok:
+                raise RuntimeError(f"Facebook lỗi {r.status_code}: {r.text[:400]}")
+            return r.json()
+
+        short = call("oauth/access_token", client_id=app_id, client_secret=app_secret,
+                     redirect_uri=REDIRECT, code=got["code"])["access_token"]
+        long_user = call("oauth/access_token", grant_type="fb_exchange_token", client_id=app_id,
+                         client_secret=app_secret, fb_exchange_token=short)["access_token"]
+        pages = call("me/accounts", access_token=long_user, fields="id,name,access_token", limit=100).get("data", [])
+        if not pages:
+            raise RuntimeError("Tài khoản này chưa quản lý Trang nào, hoặc chưa chọn Trang khi đăng nhập.")
+        want = page_name or env("FB_PAGE_NAME")
+        page = next((p for p in pages if want and want.lower() in p["name"].lower()), None)
+        if page is None:
+            if len(pages) > 1:
+                names = ", ".join(p["name"] for p in pages)
+                raise RuntimeError(f"Có nhiều Trang ({names}). Đặt FB_PAGE_NAME trong .env rồi chạy lại.")
+            page = pages[0]
+        # token Trang lấy từ token người dùng dài hạn => không hết hạn
+        self.page_file.write_text(json.dumps({"page_id": page["id"], "page_name": page["name"],
+                                              "page_token": page["access_token"]}, indent=2), encoding="utf-8")
+        self.page_id, self.token = page["id"], page["access_token"]
         print("Đã kết nối Facebook:", self.channel_stats())
 
     def _get(self, path: str, **params) -> dict:

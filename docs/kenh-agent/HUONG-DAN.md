@@ -34,22 +34,19 @@ Lưu ý: YouTube cho mỗi dự án ~6 lượt tải video/ngày với hạn m�
 
 ## Kết nối Facebook Page
 
-1. Vào https://developers.facebook.com → **My Apps → Create App** (loại Business).
-2. Mở **Graph API Explorer**, chọn app vừa tạo, chọn Page của bạn, tích các quyền:
-   `pages_show_list, pages_manage_posts, pages_read_engagement, pages_manage_engagement, pages_read_user_content, read_insights`.
-3. Bấm **Generate Access Token**, rồi dùng **Access Token Debugger → Extend** để lấy token dài hạn của Page.
-4. Mở file `.env` trong thư mục OpenMontage, thêm 2 dòng:
-   ```
-   FB_PAGE_ID=số-id-của-page
-   FB_PAGE_TOKEN=token-dài-hạn
-   ```
-   (hoặc nhờ Claude: "mở file .env để mình dán token Facebook" — bạn tự dán, Claude không cần thấy token.)
+1. Vào https://developers.facebook.com → **Tạo ứng dụng** → trường hợp sử dụng **Quản lý mọi thứ trên Trang**
+   (không cần gắn hồ sơ doanh nghiệp).
+2. Trong **Trường hợp sử dụng → Tùy chỉnh**, bấm **Thêm** cho các quyền: `pages_manage_posts`,
+   `pages_read_engagement`, `pages_manage_engagement`, `pages_read_user_content`, `read_insights`.
+3. Thêm vào `.env`: `FB_APP_ID=...`, `FB_APP_SECRET=...` (lấy ở **Cài đặt ứng dụng → Thông tin cơ bản**),
+   và `FB_PAGE_NAME=<một phần tên Trang>` nếu bạn quản lý nhiều Trang.
+4. Nói với Claude **"kết nối Facebook"** → đăng nhập, chỉ tích đúng Trang. Agent tự lưu token Trang không hết hạn.
 
 ## Kết nối TikTok
 
 1. Vào https://developers.tiktok.com → tạo app → thêm **Login Kit** và **Content Posting API** (bật Direct Post).
 2. Scope: `user.info.basic, user.info.stats, video.list, video.upload, video.publish`.
-3. Redirect URI: `http://localhost:8765/callback/`
+3. Nền tảng: **Desktop**. Redirect URI (thẻ Desktop): `http://localhost:8765/callback/`
 4. Thêm vào `.env`:
    ```
    TIKTOK_CLIENT_KEY=...
