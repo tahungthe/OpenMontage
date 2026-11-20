@@ -1,0 +1,6 @@
+# Thư viện cho agent quản lý kênh (kenh_agent)
+google-api-python-client>=2.100   # YouTube Data API + YouTube Analytics API
+google-auth-oauthlib>=1.2         # Đăng nhập YouTube (OAuth) lần đầu
+requests>=2.31                    # Facebook Graph API, TikTok API, Telegram
+pyyaml>=6.0
+python-dotenv>=1.0

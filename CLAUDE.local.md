@@ -53,3 +53,14 @@ Nếu không có mạng hoặc lệnh lỗi thì bỏ qua, không làm phiền n
    Nếu `remotion-composer/package.json` đổi: `cd remotion-composer && npm install`.
 5. `git push origin main` để fork trên GitHub cũng mới. Nếu cần đăng nhập GitHub, nhờ người dùng đăng nhập trong cửa sổ hiện ra.
 6. Báo lại bằng 2-3 câu: đã cập nhật gì, có gì cần chú ý.
+
+## Agent quản lý kênh review phim (`quan-ly-kenh`, từ 2026-11-20)
+- Người dùng đã giao toàn quyền cho agent `quan-ly-kenh` vận hành kênh review phim YouTube/TikTok/Facebook,
+  kể cả tự duyệt mọi cổng trong OpenMontage. Hướng dẫn cho người dùng: `docs/kenh-agent/HUONG-DAN.md`.
+- Khi người dùng nói "chạy kênh", "làm việc hôm nay", "trả lời bình luận", "phân tích tuần", "báo cáo kênh":
+  gọi agent `quan-ly-kenh` (Agent tool) với đúng quy trình (A/C/E) trong `.claude/agents/quan-ly-kenh.md`.
+- "kết nối YouTube/TikTok/Facebook": chạy `.venv/Scripts/python.exe -m kenh_agent connect <nền tảng>`
+  (YouTube/TikTok mở trình duyệt; người dùng tự đăng nhập). Không bao giờ hỏi xin token hay mật khẩu trong chat.
+- "bật chế độ thật": kiểm tra `kenh_agent status` thấy đã kết nối, rồi `kenh_agent mode live`.
+- Dữ liệu của agent nằm trong `kenh/agent/` (bộ nhớ, báo cáo, token) — riêng tư, không đưa lên GitHub.
+- Thư viện thêm: `requirements-kenh.txt` (cài vào `.venv` trên máy mới).
