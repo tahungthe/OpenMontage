@@ -54,7 +54,7 @@ class YouTube(Platform):
         if not self.client_file.exists():
             raise RuntimeError(f"Thiếu file {self.client_file}. Xem hướng dẫn docs/kenh-agent/HUONG-DAN.md")
         flow = InstalledAppFlow.from_client_secrets_file(str(self.client_file), SCOPES)
-        creds = flow.run_local_server(port=0, prompt="consent", access_type="offline")
+        creds = flow.run_local_server(port=0, prompt="select_account consent", access_type="offline")
         self.token_file.write_text(creds.to_json(), encoding="utf-8")
         print("Đã kết nối YouTube:", self.channel_stats())
 
