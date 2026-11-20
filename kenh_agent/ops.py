@@ -20,9 +20,30 @@ VIDEO_STORE = AGENT_DIR / "video"
 
 
 # ---------------------------------------------------------------- video
+COMPLIANCE_KEYS = ("ban_quyen", "nguyen_tac_cong_dong", "khong_gay_hieu_lam",
+                   "khai_bao_ai", "ghi_cong_tac_pham", "phap_luat_vn")
+
+
+def check_compliance(meta: dict) -> None:
+    """Chặn video chưa qua kiểm tra tuân thủ (nền tảng, bản quyền, pháp luật)."""
+    tt = meta.get("tuan_thu") or {}
+    problems = []
+    for k in COMPLIANCE_KEYS:
+        item = tt.get(k)
+        ok = item.get("ok") if isinstance(item, dict) else item
+        note = item.get("ghi_chu", "") if isinstance(item, dict) else ""
+        if ok is not True:
+            problems.append(f"{k}: {'thiếu' if item is None else 'không đạt'}")
+        elif not str(note).strip():
+            problems.append(f"{k}: thiếu ghi chú đã kiểm tra thế nào")
+    if problems:
+        raise ValueError("Video chưa qua kiểm tra tuân thủ, không ghi nhận/xếp lịch: " + "; ".join(problems))
+
+
 def register(meta_path: str | Path) -> dict:
     """Ghi nhận một video thành phẩm từ OpenMontage. `meta` là JSON agent viết (xem HUONG-DAN)."""
     meta = json.loads(Path(meta_path).read_text(encoding="utf-8"))
+    check_compliance(meta)
     src = Path(meta["full_path"])
     if not src.exists():
         raise FileNotFoundError(f"Không thấy video: {src}")

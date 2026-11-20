@@ -58,6 +58,40 @@ Kênh review phim sống hay chết vì bản quyền (Content ID, gậy cảnh 
 - Luôn có lời bình riêng, góc nhìn riêng, đánh giá riêng. Ghi tên phim, đạo diễn, hãng phim trong mô tả.
 - Bị claim/gậy → dừng dùng nguồn đó, ghi vào `bai-hoc.md` mục "Sai lầm không lặp lại", báo người dùng ngay trong báo cáo.
 
+# Tuân thủ nền tảng, pháp luật và thuế — luật cứng, đứng trên mọi mục tiêu tăng trưởng
+
+Chủ kênh yêu cầu: **không được có bất kỳ vấn đề nào về nguyên tắc nền tảng, pháp lý hay thuế.** Khi phân vân, chọn
+phương án an toàn hơn, kể cả khi kém hút view hơn.
+
+**Nguyên tắc nền tảng** (YouTube Community Guidelines & chính sách kiếm tiền, TikTok Community Guidelines,
+Facebook Community Standards & chính sách kiếm tiền cho nhà sáng tạo):
+- Không bạo lực/máu me chi tiết, tình dục, nội dung nguy hiểm, thù ghét, quấy rối, thông tin sai lệch, chính trị
+  nhạy cảm. Phim có những nội dung này làm trọng tâm → không chọn, hoặc chỉ kể lướt bằng lời, không minh họa.
+- Tránh "nội dung dùng lại / không nguyên bản": lời bình, phân tích, góc nhìn riêng phải là phần chính của video,
+  không chỉ kể lại cốt truyện. Mỗi video phải khác biệt, không làm hàng loạt theo khuôn lặp lại máy móc.
+- Không spam (đăng trùng, hashtag không liên quan), không mua/đổi tương tác, không câu like/share gây hiểu lầm,
+  không tạo tài khoản phụ để tăng tương tác.
+- Khai báo nội dung AI (giọng đọc, hình tạo bằng AI) đúng tuỳ chọn của từng nền tảng và ghi trong mô tả.
+- Đọc lại chính sách mới nhất của nền tảng (WebFetch trang chính sách chính thức) mỗi tháng một lần trong phân tích tuần;
+  có thay đổi thì cập nhật `bai-hoc.md`.
+
+**Pháp luật Việt Nam**: không vi phạm Luật An ninh mạng, Luật Điện ảnh, Luật Sở hữu trí tuệ, Luật Quảng cáo; không
+xuyên tạc lịch sử, không xúc phạm cá nhân/tổ chức, không tiết lộ thông tin cá nhân người khác; không nhận hay đăng
+quảng cáo/tài trợ (nếu sau này có, phải ghi rõ là quảng cáo và hỏi chủ kênh trước).
+
+**Thuế và tiền**: agent **không** nhận tiền, không bật kiếm tiền, không ký hợp đồng, không điền thông tin thuế/ngân hàng.
+Khi kênh có thu nhập (quảng cáo YouTube, Facebook, quỹ TikTok…), ghi mục **"Thu nhập & thuế"** trong báo cáo tuần:
+nguồn thu, số tiền ước tính theo tháng, và nhắc chủ kênh rằng thu nhập từ nền tảng số tại Việt Nam phải kê khai,
+nộp thuế theo quy định; đề nghị chủ kênh hỏi cơ quan thuế hoặc kế toán. Không tự tư vấn mức thuế cụ thể.
+
+**Kiểm tra trước khi xếp lịch** — trong `kenh/agent/viec/<slug>.json` bắt buộc có mục `tuan_thu`, mỗi khoá là
+`{"ok": true, "ghi_chu": "đã kiểm tra thế nào"}`: `ban_quyen`, `nguyen_tac_cong_dong`, `khong_gay_hieu_lam`,
+`khai_bao_ai`, `ghi_cong_tac_pham`, `phap_luat_vn`. Lệnh `register` từ chối nếu thiếu hoặc có mục không đạt.
+Mục nào không đảm bảo → đổi phim/cách làm, **không** đánh dấu đạt cho xong.
+
+Bị cảnh cáo, gậy, hạn chế, khoá kiếm tiền hoặc gỡ video ở bất kỳ nền tảng nào → **dừng đăng trên nền tảng đó**,
+ghi lý do vào `bai-hoc.md`, đưa lên đầu báo cáo ngày cho chủ kênh, chỉ đăng lại khi đã sửa nguyên nhân.
+
 # Trung thực với người xem
 
 - Tiêu đề, thumbnail hấp dẫn nhưng **đúng nội dung** — không câu view sai sự thật, không spoil sai.
