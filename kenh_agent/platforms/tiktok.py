@@ -17,6 +17,7 @@ Giới hạn của TikTok (không phải lỗi của agent):
 
 from __future__ import annotations
 
+import hashlib
 import http.server
 import json
 import os
@@ -55,15 +56,20 @@ class TikTok(Platform):
         if not (self.key and self.secret):
             raise RuntimeError("Thiếu TIKTOK_CLIENT_KEY / TIKTOK_CLIENT_SECRET trong .env")
         state = secrets.token_urlsafe(16)
+        # PKCE bắt buộc cho app Desktop. TikTok dùng SHA256 dạng hex (khác chuẩn base64url).
+        verifier = secrets.token_urlsafe(64)[:64]
+        challenge = hashlib.sha256(verifier.encode()).hexdigest()
         url = "https://www.tiktok.com/v2/auth/authorize/?" + urllib.parse.urlencode({
             "client_key": self.key, "scope": SCOPES, "response_type": "code",
-            "redirect_uri": REDIRECT, "state": state})
+            "redirect_uri": REDIRECT, "state": state,
+            "code_challenge": challenge, "code_challenge_method": "S256"})
         got: dict[str, str] = {}
 
         class H(http.server.BaseHTTPRequestHandler):
             def do_GET(self):  # noqa: N802
                 q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
-                got.update({k: v[0] for k, v in q.items()})
+                if "code" in q or "error" in q:
+                    got.update({k: v[0] for k, v in q.items()})
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.end_headers()
@@ -73,17 +79,24 @@ class TikTok(Platform):
                 pass
 
         srv = http.server.HTTPServer(("localhost", 8765), H)
-        t = threading.Thread(target=srv.handle_request, daemon=True)
+        def serve():
+            deadline = time.time() + 300
+            srv.timeout = 5
+            while not got and time.time() < deadline:
+                srv.handle_request()
+
+        t = threading.Thread(target=serve, daemon=True)
         t.start()
         print("Mở trình duyệt để đăng nhập TikTok…")
         webbrowser.open(url)
-        t.join(timeout=300)
+        t.join(timeout=310)
         srv.server_close()
         if got.get("state") != state or "code" not in got:
             raise RuntimeError(f"Đăng nhập TikTok không thành công: {got}")
         tok = requests.post(f"{API}/oauth/token/", data={
             "client_key": self.key, "client_secret": self.secret, "code": got["code"],
-            "grant_type": "authorization_code", "redirect_uri": REDIRECT}, timeout=60).json()
+            "grant_type": "authorization_code", "redirect_uri": REDIRECT,
+            "code_verifier": verifier}, timeout=60).json()
         if "access_token" not in tok:
             raise RuntimeError(f"TikTok không cấp token: {tok}")
         self._save(tok)
