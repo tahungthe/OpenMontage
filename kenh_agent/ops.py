@@ -4,6 +4,7 @@ lấy số liệu, lấy/gửi bình luận, quét thị trường."""
 from __future__ import annotations
 
 import json
+import re
 import statistics
 import time
 import traceback
@@ -36,8 +37,97 @@ def check_compliance(meta: dict) -> None:
             problems.append(f"{k}: {'thiếu' if item is None else 'không đạt'}")
         elif not str(note).strip():
             problems.append(f"{k}: thiếu ghi chú đã kiểm tra thế nào")
+    problems += check_short_drama_rules(meta)
     if problems:
         raise ValueError("Video chưa qua kiểm tra tuân thủ, không ghi nhận/xếp lịch: " + "; ".join(problems))
+
+
+# Quy định của các nền tảng phim ngắn — xem docs/kenh-agent/QUY-DINH-PHIM-NGAN.md
+# tên -> (hashtag bắt buộc hoặc None, cần link quảng bá, thời lượng tối đa (giây) hoặc None)
+SHORT_DRAMA_RULES = {
+    "dramabox": ("#DramaBox", False, None),
+    "flickreels": ("#FlickReels", False, None),
+    "reelshort": ("#ReelShort", True, None),
+    "kalostv": (None, False, 40 * 60),
+    "goodshorts": ("#Goodshort", False, None),
+    "shortmax": (None, False, None),          # CẤM ghi tên/hashtag thương hiệu
+    "honeyreels": ("#HoneyReels", False, None),
+    "dreame": ("#Dreameshort", False, None),
+    "starshort": ("#StarShort", False, None),
+    "playlet": ("#Playlet", True, None),
+    "netshort": ("#NetShort", True, 40 * 60),
+}
+SHORT_DRAMA_KEYS = ("pham_vi_tu_lieu", "bo_nhac_goc", "bien_tap_sang_tao")
+_BRAND_WORDS = {"dramabox": ["dramabox"], "flickreels": ["flickreels", "flick reels"],
+                "reelshort": ["reelshort", "reels link", "reelslink"], "kalostv": ["kalostv", "kalos"],
+                "goodshorts": ["goodshort"], "shortmax": ["shortmax", "short max"],
+                "honeyreels": ["honeyreels", "honey reels"], "dreame": ["dreame"],
+                "starshort": ["starshort"], "playlet": ["playlet"], "netshort": ["netshort"]}
+
+
+def _has_word(low: str, words: list[str]) -> bool:
+    """Tìm tên thương hiệu như một từ riêng (tránh nhầm 'dreame' trong 'dreamer')."""
+    return any(re.search(rf"(?<![a-z0-9]){re.escape(w)}(s|short)?(?![a-z0-9])", low) for w in words)
+
+
+def _norm_platform(name: str) -> str:
+    return "".join(ch for ch in str(name).lower() if ch.isalnum())
+
+
+def _all_texts(meta: dict) -> tuple[str, list[str]]:
+    """Gộp mọi chữ sẽ hiện ra công khai; trả về (toàn bộ chữ, danh sách tiêu đề)."""
+    titles = [meta.get("title", "")]
+    texts = [meta.get("title", ""), meta.get("description", ""), " ".join(meta.get("tags") or []),
+             " ".join(meta.get("hashtag") or []), " ".join(meta.get("caption_phan") or [])]
+    for p in ("youtube", "facebook", "tiktok"):
+        d = meta.get(p) or {}
+        titles.append(d.get("title", ""))
+        texts += [d.get("title", ""), d.get("description", ""), d.get("caption", "")]
+    return "\n".join(t for t in texts if t), [t for t in titles if t]
+
+
+def check_short_drama_rules(meta: dict) -> list[str]:
+    name = meta.get("nen_tang_phim")
+    if not name:
+        return []
+    key = _norm_platform(name)
+    if key == "goodshort":
+        key = "goodshorts"
+    if key not in SHORT_DRAMA_RULES:
+        return [f"nen_tang_phim '{name}' không có trong danh sách quy định — kiểm tra lại tên"]
+    hashtag, need_link, max_dur = SHORT_DRAMA_RULES[key]
+    problems = []
+    tt = meta.get("tuan_thu") or {}
+    for k in SHORT_DRAMA_KEYS:
+        item = tt.get(k)
+        if not (isinstance(item, dict) and item.get("ok") is True and str(item.get("ghi_chu", "")).strip()):
+            problems.append(f"{k}: thiếu hoặc không đạt (quy định phim ngắn)")
+    text, titles = _all_texts(meta)
+    low = text.lower()
+    if hashtag and hashtag.lower() not in low:
+        problems.append(f"thiếu hashtag bắt buộc {hashtag}")
+    if key == "shortmax":
+        if _has_word(low, _BRAND_WORDS["shortmax"]):
+            problems.append("ShortMAX CẤM ghi tên/hashtag thương hiệu trong tiêu đề, mô tả, hashtag")
+    for other, words in _BRAND_WORDS.items():
+        if other != key and _has_word(low, words):
+            problems.append(f"nhắc tên nền tảng khác ({other}) — mỗi video chỉ một nền tảng")
+    if key == "flickreels":
+        bad = ["全集", "合集", "trọn bộ", "tron bo", "tổng hợp", "tong hop", "full"]
+        if any(b in t.lower() for t in titles for b in bad):
+            problems.append("FlickReels: tiêu đề không được có 'Trọn bộ / Tổng hợp / Full / 全集 / 合集'")
+    if need_link and not str(meta.get("link_quang_ba", "")).strip():
+        problems.append(f"{name}: bắt buộc có link_quang_ba")
+    elif need_link and meta["link_quang_ba"].strip() not in text:
+        problems.append(f"{name}: link quảng bá chưa có trong mô tả/caption")
+    if max_dur and meta.get("full_path"):
+        try:
+            dur = clipper.probe(meta["full_path"]).get("duration", 0)
+        except Exception:
+            dur = 0
+        if dur > max_dur:
+            problems.append(f"{name}: video dài {dur/60:.0f} phút, vượt tối đa {max_dur//60} phút")
+    return problems
 
 
 def register(meta_path: str | Path) -> dict:
@@ -108,6 +198,41 @@ def _part_caption(v: dict, idx: int, total: int, platform: str) -> str:
     return f"{base}\n{tags}".strip()
 
 
+def _series_after(v: dict, platform: str):
+    """Tập N của một series phải lên sau tập N-1 trên cùng nền tảng (giữ người xem theo dõi liền mạch)."""
+    series, tap = v["meta"].get("series"), v["meta"].get("tap")
+    if not series or tap is None:
+        return None
+    earlier = []
+    for o in rows("SELECT id, slug FROM videos WHERE id != ?", (v["id"],)):
+        f = VIDEO_STORE / o["slug"] / "meta.json"
+        m = json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
+        if m.get("series") == series and m.get("tap") is not None and float(m["tap"]) < float(tap):
+            earlier.append(o["id"])
+    if not earlier:
+        return None
+    marks = ",".join("?" * len(earlier))
+    r = rows(f"""SELECT MAX(COALESCE(posted_at, scheduled_at)) AS t FROM posts
+                 WHERE platform=? AND status IN ('scheduled','posted') AND video_id IN ({marks})""",
+             (platform, *earlier))
+    t = r[0]["t"] if r else None
+    if not t:
+        return None
+    return max(parse_iso(t), now_vn() + timedelta(minutes=20))
+
+
+def _shorts_text(title: str, desc: str, info: dict) -> tuple[str, str, str | None]:
+    """Video dọc ≤ 3 phút lên YouTube thành Shorts: bảo đảm có #Shorts."""
+    w, h, dur = info.get("width", 0), info.get("height", 0), info.get("duration", 0)
+    if not (h > w):
+        return title, desc, None
+    if dur > 180:
+        return title, desc, f"Video dọc dài {dur:.0f}s > 180s: YouTube sẽ KHÔNG tính là Shorts — nên rút tập dưới 3 phút"
+    if "#shorts" not in (title + " " + desc).lower():
+        desc = (desc + "\n#Shorts").strip()
+    return title, desc, None
+
+
 def queue(slug: str, cfg: dict, platforms: list[str] | None = None) -> list[dict]:
     """Lên lịch đăng cho một video trên các nền tảng, vào giờ tốt nhất còn trống."""
     v = get_video(slug)
@@ -127,13 +252,20 @@ def queue(slug: str, cfg: dict, platforms: list[str] | None = None) -> list[dict
                             "scheduled_at": iso(when)})
         return when
 
+    try:
+        info = clipper.probe(v["full_path"])
+    except Exception:
+        info = {}
+
     if "youtube" in platforms:
         yt = meta.get("youtube", {})
-        add("youtube", "full", v["full_path"], yt.get("title") or v["title"],
-            yt.get("description") or v["description"], None)
+        title, desc, warn = _shorts_text(yt.get("title") or v["title"], yt.get("description") or v["description"], info)
+        add("youtube", "full", v["full_path"], title, desc, None, after=_series_after(v, "youtube"))
+        if warn:
+            created[-1]["canh_bao"] = warn
 
     if parts and "tiktok" in platforms:
-        prev = None
+        prev = _series_after(v, "tiktok")
         for p in parts:   # các phần phải lên theo đúng thứ tự
             prev = add("tiktok", "phan", p["path"], f"{v['title']} - Phần {p['idx']}",
                        _part_caption(v, p["idx"], p["total"], "tiktok"), p["idx"], after=prev)
@@ -143,9 +275,9 @@ def queue(slug: str, cfg: dict, platforms: list[str] | None = None) -> list[dict
         fb = meta.get("facebook", {})
         if fmt == "full" or not parts:
             add("facebook", "full", v["full_path"], fb.get("title") or v["title"],
-                fb.get("description") or v["description"], None)
+                fb.get("description") or v["description"], None, after=_series_after(v, "facebook"))
         else:
-            prev = None
+            prev = _series_after(v, "facebook")
             for p in parts:
                 prev = add("facebook", "reel", p["path"], f"{v['title']} - Phần {p['idx']}",
                            _part_caption(v, p["idx"], p["total"], "facebook"), p["idx"], after=prev)
@@ -178,8 +310,14 @@ def publish_due(cfg: dict, limit: int = 5) -> list[dict]:
                         (p["video_id"], p["platform"], p["part_idx"] - 1))
             if prev and prev[0]["status"] != "posted":
                 continue
+        # Giành quyền đăng một cách nguyên tử: nếu một lần chạy khác (hẹn giờ 15 phút, hoặc chạy tay)
+        # đã nhận bài này thì bỏ qua — tránh đăng trùng hai lần.
         with connect() as c:
-            c.execute("UPDATE posts SET status='posting', attempts=attempts+1 WHERE id=?", (p["id"],))
+            cur = c.execute("UPDATE posts SET status='posting', attempts=attempts+1 "
+                            "WHERE id=? AND status IN ('scheduled','failed')", (p["id"],))
+            claimed = cur.rowcount == 1
+        if not claimed:
+            continue
         video = get_video(rows("SELECT slug FROM videos WHERE id=?", (p["video_id"],))[0]["slug"])
         try:
             res = plat.upload(p, video)

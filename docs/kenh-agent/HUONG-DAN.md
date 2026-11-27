@@ -20,6 +20,17 @@ Tác vụ hẹn giờ chỉ chạy khi app Claude đang mở (máy tắt thì ch
 
 Báo cáo nằm ở `kenh/agent/bao-cao/`. Muốn nhận trên điện thoại: xem mục Telegram cuối trang.
 
+## Làm hình bằng Google Flow (việc duy nhất của bạn)
+
+Agent viết sẵn kịch bản và prompt cho từng cảnh. Bạn chỉ cần:
+
+1. Mở trang **PHIEU-FLOW.html** agent báo (nằm trong `kenh/flow/<series>/<tập>/`). Bấm đúp để mở bằng trình duyệt.
+2. Mở https://labs.google/flow. Làm lần lượt từng thẻ: bấm **Chép prompt**, dán vào Flow, chọn đúng chế độ ghi trên thẻ, rồi tạo.
+3. Ưng bản nào thì tải về, đặt đúng tên ghi trên thẻ (có nút **Chép tên file**), bỏ vào thư mục `nhan` mà trang phiếu chỉ.
+4. Xong thì nói với Claude: **"đã làm xong phiếu Flow"**. Agent tự kiểm tra, dựng video, xếp lịch đăng.
+
+Mỗi tập thường có 6–8 clip video và 10–15 ảnh, mất khoảng 30–40 phút. Agent tính sẵn credit để không dùng quá gói.
+
 ## Kết nối YouTube (khoảng 10 phút)
 
 1. Vào https://console.cloud.google.com → tạo dự án mới (tên tuỳ ý).

@@ -13,6 +13,7 @@
     python -m kenh_agent strategy [KEY VALUE --reason ...]
     python -m kenh_agent mode test|live
     python -m kenh_agent install-poster
+    python -m kenh_agent flow phieu|check <phieu.json>
 """
 
 from __future__ import annotations
@@ -120,6 +121,7 @@ def main(argv=None) -> None:
     c = sub.add_parser("strategy"); c.add_argument("key", nargs="?"); c.add_argument("value", nargs="?"); c.add_argument("--reason", default="")
     c = sub.add_parser("mode"); c.add_argument("which", choices=["test", "live"])
     sub.add_parser("install-poster")
+    c = sub.add_parser("flow"); c.add_argument("action", choices=["phieu", "check"]); c.add_argument("file")
     a = ap.parse_args(argv)
     cfg = load_config()
 
@@ -188,6 +190,12 @@ def main(argv=None) -> None:
                 print("Xếp lại bài", p["id"], "->", ops.reschedule(p["id"], cfg2))
     elif a.cmd == "install-poster":
         cmd_install_poster()
+    elif a.cmd == "flow":
+        from . import flow
+        if a.action == "phieu":
+            print(flow.phieu(a.file))
+        else:
+            _print(flow.check(a.file))
 
 
 if __name__ == "__main__":

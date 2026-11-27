@@ -36,7 +36,7 @@ from .base import Platform
 API = "https://open.tiktokapis.com/v2"
 SCOPES = "user.info.basic,user.info.stats,video.list,video.upload,video.publish"
 REDIRECT = "http://localhost:8765/callback/"
-CHUNK = 10 * 1024 * 1024
+CHUNK = 10 * 1024 * 1024  # khúc 10MB: mạng chập chờn vẫn tải được (TikTok cho 5–64MB)
 
 
 class TikTok(Platform):
@@ -159,9 +159,16 @@ class TikTok(Platform):
                 end = size - 1 if i == count - 1 else start + chunk - 1
                 f.seek(start)
                 body = f.read(end - start + 1)
-                r = requests.put(upload_url, data=body, timeout=600, headers={
-                    "Content-Type": "video/mp4", "Content-Length": str(len(body)),
-                    "Content-Range": f"bytes {start}-{end}/{size}"})
+                for attempt in range(5):  # mạng chập chờn (SSL EOF): thử lại từng khúc
+                    try:
+                        r = requests.put(upload_url, data=body, timeout=600, headers={
+                            "Content-Type": "video/mp4", "Content-Length": str(len(body)),
+                            "Content-Range": f"bytes {start}-{end}/{size}"})
+                        break
+                    except requests.exceptions.RequestException:
+                        if attempt == 4:
+                            raise
+                        time.sleep(5 * (attempt + 1))
                 if r.status_code not in (200, 201, 206):
                     raise RuntimeError(f"TikTok tải lên lỗi {r.status_code}: {r.text[:300]}")
         # chờ TikTok xử lý để lấy id bài đăng
