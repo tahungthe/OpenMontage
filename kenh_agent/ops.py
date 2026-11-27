@@ -104,13 +104,15 @@ def check_short_drama_rules(meta: dict) -> list[str]:
             problems.append(f"{k}: thiếu hoặc không đạt (quy định phim ngắn)")
     text, titles = _all_texts(meta)
     low = text.lower()
+    link = str(meta.get("link_quang_ba", "")).strip()
+    low_nolink = low.replace(link.lower(), " ") if link else low   # link quảng bá được phép chứa tên app
     if hashtag and hashtag.lower() not in low:
         problems.append(f"thiếu hashtag bắt buộc {hashtag}")
     if key == "shortmax":
-        if _has_word(low, _BRAND_WORDS["shortmax"]):
+        if _has_word(low_nolink, _BRAND_WORDS["shortmax"]):
             problems.append("ShortMAX CẤM ghi tên/hashtag thương hiệu trong tiêu đề, mô tả, hashtag")
     for other, words in _BRAND_WORDS.items():
-        if other != key and _has_word(low, words):
+        if other != key and _has_word(low_nolink, words):
             problems.append(f"nhắc tên nền tảng khác ({other}) — mỗi video chỉ một nền tảng")
     if key == "flickreels":
         bad = ["全集", "合集", "trọn bộ", "tron bo", "tổng hợp", "tong hop", "full"]
@@ -237,8 +239,12 @@ def queue(slug: str, cfg: dict, platforms: list[str] | None = None) -> list[dict
     """Lên lịch đăng cho một video trên các nền tảng, vào giờ tốt nhất còn trống."""
     v = get_video(slug)
     parts = rows("SELECT * FROM parts WHERE video_id=? ORDER BY idx", (v["id"],))
-    platforms = platforms or list(PLATFORMS)
     meta = v["meta"]
+    if meta.get("nen_tang_phim"):
+        # Tiếp thị liên kết phim ngắn: chỉ đăng nơi đã báo cáo kênh (mặc định chỉ YouTube)
+        allowed = meta.get("nen_tang_dang") or ["youtube"]
+        platforms = [p for p in (platforms or allowed) if p in allowed]
+    platforms = platforms or list(PLATFORMS)
     created = []
 
     def add(platform, fmt, path, title, caption, part_idx, after=None):
@@ -533,3 +539,20 @@ def facebook_format_verdict(min_each: int = 4) -> dict:
             "phan" if res["tb_phan"] >= res["tb_full"] * 1.1 else "chua-ro")
     return res
 
+
+
+def make_public(slug: str, cfg: dict) -> list[dict]:
+    """Chủ kênh xác nhận đã mở khoá bản quyền (版权解锁) -> chuyển bài YouTube của video sang Công khai."""
+    v = get_video(slug)
+    posts = rows("SELECT * FROM posts WHERE video_id=? AND platform='youtube' AND status='posted'", (v["id"],))
+    if not posts:
+        raise ValueError(f"{slug}: chưa có bài YouTube nào đã tải lên")
+    if cfg.get("dry_run"):
+        return [{"id": p["id"], "status": "chay-thu (chưa công khai)"} for p in posts]
+    plat = get_platform("youtube", cfg)
+    out = []
+    for p in posts:
+        plat.make_public(p["remote_id"])
+        log_event("public", f"youtube #{p['id']} đã chuyển Công khai sau khi mở khoá bản quyền", {"url": p["url"]})
+        out.append({"id": p["id"], "status": "public", "url": p["url"]})
+    return out

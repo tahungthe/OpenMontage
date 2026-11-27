@@ -14,6 +14,7 @@
     python -m kenh_agent mode test|live
     python -m kenh_agent install-poster
     python -m kenh_agent flow phieu|check <phieu.json>
+    python -m kenh_agent cong-khai <slug>     (phim ngắn: sau khi đã mở khoá bản quyền)
 """
 
 from __future__ import annotations
@@ -121,6 +122,7 @@ def main(argv=None) -> None:
     c = sub.add_parser("strategy"); c.add_argument("key", nargs="?"); c.add_argument("value", nargs="?"); c.add_argument("--reason", default="")
     c = sub.add_parser("mode"); c.add_argument("which", choices=["test", "live"])
     sub.add_parser("install-poster")
+    c = sub.add_parser("cong-khai"); c.add_argument("slug")
     c = sub.add_parser("flow"); c.add_argument("action", choices=["phieu", "check"]); c.add_argument("file")
     a = ap.parse_args(argv)
     cfg = load_config()
@@ -188,6 +190,8 @@ def main(argv=None) -> None:
             for p in _rows("SELECT id FROM posts WHERE status='scheduled' AND scheduled_at <= ? ORDER BY scheduled_at",
                            (iso(now_vn()),)):
                 print("Xếp lại bài", p["id"], "->", ops.reschedule(p["id"], cfg2))
+    elif a.cmd == "cong-khai":
+        _print(ops.make_public(a.slug, cfg))
     elif a.cmd == "install-poster":
         cmd_install_poster()
     elif a.cmd == "flow":

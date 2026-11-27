@@ -41,6 +41,12 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "giong_tra_loi": "thân thiện, hài hước nhẹ, xưng 'mình' gọi 'bạn', như admin kênh",
         "hashtag_mac_dinh": ["#reviewphim", "#tomtatphim", "#phimhay"],
     },
+    # Tiếp thị liên kết phim ngắn (docs/kenh-agent/QUY-DINH-PHIM-NGAN.md)
+    "phim_ngan": {
+        "app_dang_lam": "ShortMAX",      # giai đoạn đầu chỉ làm 1 app
+        "ngon_ngu": "en",                # thuyết minh đúng ngôn ngữ gốc của phim
+        "kenh_youtube_id": "",           # ID kênh đã báo cáo (报备) với bên phân phối; trống = không đăng
+    },
     "nhip_dang": {
         "youtube_full_moi_tuan": 5,      # số video full/tuần trên YouTube
         "tiktok_phan_moi_ngay": 3,       # số phần cắt/ngày trên TikTok

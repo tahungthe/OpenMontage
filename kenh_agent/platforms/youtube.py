@@ -83,24 +83,40 @@ class YouTube(Platform):
         from googleapiclient.http import MediaFileUpload
 
         tags = video.get("tags_list") or []
+        meta = video.get("meta") or {}
+        drama = bool(meta.get("nen_tang_phim"))   # tiếp thị liên kết phim ngắn — xem QUY-DINH-PHIM-NGAN.md
+        lang = meta.get("ngon_ngu", "en" if drama else "vi")
+        if drama:
+            want = str((self.cfg.get("phim_ngan") or {}).get("kenh_youtube_id") or "").strip()
+            if not want:
+                raise RuntimeError("Video phim ngắn: chưa ghi phim_ngan.kenh_youtube_id (kênh đã báo cáo 报备 với "
+                                   "bên phân phối) trong cau-hinh.yaml — không đăng")
+            if self.channel_id() != want:
+                raise RuntimeError(f"Video phim ngắn: YouTube đang kết nối kênh {self.channel_id()}, không phải kênh "
+                                   f"đã báo cáo {want} — không đăng")
         body = {
             "snippet": {
                 "title": (post.get("title") or video["title"])[:100],
                 "description": (post.get("caption") or video.get("description") or "")[:4900],
                 "tags": tags[:30],
                 "categoryId": str(self.cfg.get("youtube_danh_muc", "1")),
-                "defaultLanguage": "vi",
-                "defaultAudioLanguage": "vi",
+                "defaultLanguage": lang,
+                "defaultAudioLanguage": lang,
             },
             "status": {
-                "privacyStatus": self.cfg.get("youtube_quyen_rieng_tu", "public"),
+                # Phim ngắn: luôn Không công khai, chờ mở khoá bản quyền (版权解锁) rồi mới công khai
+                "privacyStatus": "unlisted" if drama else self.cfg.get("youtube_quyen_rieng_tu", "public"),
                 "selfDeclaredMadeForKids": False,
                 # Video có giọng đọc / hình AI tạo: khai báo nội dung tổng hợp theo chính sách YouTube
                 "containsSyntheticMedia": True,
             },
         }
         media = MediaFileUpload(post["file_path"], chunksize=16 * 1024 * 1024, resumable=True, mimetype="video/mp4")
-        req = self.yt.videos().insert(part="snippet,status", body=body, media_body=media)
+        part = "snippet,status"
+        if drama:   # quảng bá có trả công (hoa hồng) -> khai báo paid promotion
+            body["paidProductPlacementDetails"] = {"hasPaidProductPlacement": True}
+            part += ",paidProductPlacementDetails"
+        req = self.yt.videos().insert(part=part, body=body, media_body=media)
         resp = None
         while resp is None:
             _, resp = req.next_chunk()
@@ -112,6 +128,16 @@ class YouTube(Platform):
             except Exception as e:  # kênh chưa xác minh số điện thoại thì không đặt được thumbnail
                 print("Không đặt được ảnh thumbnail:", e)
         return {"remote_id": vid, "url": f"https://www.youtube.com/watch?v={vid}"}
+
+    def make_public(self, remote_id: str) -> None:
+        """Chuyển video từ Không công khai sang Công khai (sau khi đã mở khoá bản quyền)."""
+        r = self.yt.videos().list(part="status", id=remote_id).execute()
+        if not r.get("items"):
+            raise KeyError(f"Không thấy video YouTube {remote_id}")
+        st = r["items"][0]["status"]
+        st["privacyStatus"] = "public"
+        st.pop("publishAt", None)
+        self.yt.videos().update(part="status", body={"id": remote_id, "status": st}).execute()
 
     # ---------- số liệu ----------
     def video_stats(self, remote_ids: list[str]) -> dict[str, dict]:

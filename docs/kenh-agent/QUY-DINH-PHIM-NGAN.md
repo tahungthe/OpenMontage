@@ -34,6 +34,34 @@ Khi phân vân: chọn cách an toàn hơn, hoặc không đăng.
 | PlayLet | `#Playlet` | **Bắt buộc** link PlayLet | Tập miễn phí được cấp quyền | Cấm mở đầu khêu gợi |
 | NetShort | `#NetShort` | **Bắt buộc** link NetShort | Tập miễn phí theo API cấp quyền | Video nên ~30 phút, tối đa 40 phút; không ghép nối lặp lại; nội dung tích cực, lành mạnh |
 
+## B2. Mô hình kinh doanh: tiếp thị liên kết (分销引流), KHÔNG phải kênh review ăn quảng cáo
+
+Ghi theo lời hướng dẫn của bên phân phối (27/11/2026):
+
+- **Mục tiêu**: kéo người xem có tiền vào app, để họ **nạp tiền xem tiếp** → mình được chia hoa hồng.
+  Thu nhập chính không phải tiền quảng cáo YouTube. Vì vậy video phải **gợi tò mò và dừng đúng lúc hấp dẫn**,
+  không kể hết phim, không làm "trọn bộ".
+- **Ngôn ngữ thuyết minh = ngôn ngữ gốc của phim.** Phim tiếng Anh thì thuyết minh tiếng Anh, phim tiếng Tây Ban Nha
+  thì thuyết minh tiếng Tây Ban Nha. Không dịch sang ngôn ngữ khác, vì người xem vào app sẽ không hiểu phim nên không nạp tiền.
+- **Ưu tiên thị trường giàu**: tiếng Anh (rồi mới tới Tây Ban Nha, Đức...). Không làm tiếng Đông Nam Á vì người dùng ít nạp tiền.
+  **Giai đoạn đầu: chỉ làm phim tiếng Anh, thuyết minh tiếng Anh.**
+- **Tập trung ít app**: bắt đầu với **1 app**. **Chủ kênh đã chọn: ShortMAX** (27/11/2026). Chưa làm app khác khi chủ kênh chưa cho phép.
+  Nhớ: ShortMAX **cấm** ghi tên/hashtag/watermark ShortMAX trong video, tiêu đề, mô tả (riêng link quảng bá được phép);
+  chỉ dùng phim trong danh sách ShortMAX phân phối; phần sáng tạo > 20%; 1–2 phút đầu phải là nội dung sáng tạo.
+- **YouTube**: mỗi video **20–30 phút**, **ít nhất 2 video/ngày**.
+- **Quy trình đăng YouTube bắt buộc theo thứ tự**:
+  1. **Báo cáo (报备) kênh** với bên phân phối trước khi đăng video đầu tiên (theo hướng dẫn của họ).
+  2. Dựng xong → tải lên YouTube ở chế độ **Không công khai (Unlisted)**, để ở bản nháp.
+  3. **Gửi yêu cầu mở khoá bản quyền** (版权解锁) cho video đó (theo hướng dẫn của họ).
+  4. Chỉ khi đã mở khoá xong mới chuyển sang **Công khai**.
+  Agent **không bao giờ** đăng công khai thẳng video dùng tư liệu phim ngắn.
+  Máy tự làm đúng điều này: video có `nen_tang_phim` chỉ xếp lịch lên YouTube, luôn tải lên ở chế độ **Không công khai**,
+  bật khai báo quảng cáo trả phí, và **từ chối tải lên** nếu `phim_ngan.kenh_youtube_id` trong `kenh/agent/cau-hinh.yaml`
+  trống hoặc khác kênh YouTube đang kết nối. Khi chủ kênh báo đã mở khoá bản quyền:
+  `python -m kenh_agent cong-khai <slug>` để chuyển sang Công khai.
+- Đây là **nội dung quảng bá có trả công**: trên YouTube phải bật mục khai báo "Có quảng cáo trả phí / paid promotion",
+  TikTok bật "Nội dung thương hiệu", Facebook gắn nhãn tương ứng. Thu nhập hoa hồng cũng phải kê khai thuế.
+
 ## C. Quy trình kiểm tra trước khi đăng (agent phải làm, ghi vào `tuan_thu`)
 
 Trong `kenh/agent/viec/<slug>.json` ghi thêm `"nen_tang_phim": "<tên nền tảng>"` (ví dụ `"ReelShort"`),

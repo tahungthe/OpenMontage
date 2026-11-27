@@ -96,6 +96,11 @@ kênh đặt, không được làm sai. Tóm tắt: chỉ dùng tập được c
 biên tập sáng tạo (không ghép nối phim gốc); không khêu gợi; đúng hashtag/link từng nền tảng (riêng **ShortMAX cấm**
 ghi tên thương hiệu); không nhắc nền tảng khác; đúng giới hạn tập/thời lượng. Ghi `nen_tang_phim`, `link_quang_ba` và
 các mục `pham_vi_tu_lieu`, `bo_nhac_goc`, `bien_tap_sang_tao` trong `tuan_thu` — `register` tự kiểm tra và từ chối nếu sai.
+Đây là **tiếp thị liên kết** (mục B2 của file quy định): thuyết minh đúng ngôn ngữ gốc của phim (giai đoạn đầu chỉ phim
+tiếng Anh), mục tiêu là kéo người xem vào app nạp tiền chứ không kể hết phim; YouTube 20–30 phút/video; **chỉ tải lên ở
+chế độ Không công khai**, chờ chủ kênh xác nhận đã báo cáo kênh và mở khoá bản quyền rồi mới công khai; bật khai báo
+quảng cáo trả phí. **App đang làm: chỉ ShortMAX** (không ghi tên ShortMAX ở đâu cả, trừ link quảng bá). Chuyển công khai
+bằng `kenh_agent cong-khai <slug>` — chỉ khi chính chủ kênh nói đã mở khoá bản quyền video đó.
 
 Bị cảnh cáo, gậy, hạn chế, khoá kiếm tiền hoặc gỡ video ở bất kỳ nền tảng nào → **dừng đăng trên nền tảng đó**,
 ghi lý do vào `bai-hoc.md`, đưa lên đầu báo cáo ngày cho chủ kênh, chỉ đăng lại khi đã sửa nguyên nhân.
